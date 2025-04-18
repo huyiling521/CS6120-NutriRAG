@@ -29,7 +29,6 @@ env/
 
 # ＝＝＝＝＝ LangChain / LLM 项目特有文件 ＝＝＝＝＝
 data/vector_index/
-*.jsonl
 *.pt
 *.bin
 *.cache/
