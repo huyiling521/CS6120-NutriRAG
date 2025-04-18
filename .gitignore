@@ -1,0 +1,52 @@
+# ＝＝＝＝＝ macOS 系统文件 ＝＝＝＝＝
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# ＝＝＝＝＝ Python / venv / 编译文件 ＝＝＝＝＝
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.pyo
+*.log
+*.sqlite3
+*.db
+*.egg
+*.egg-info/
+*.bak
+.env
+.venv/
+venv/
+env/
+
+# ＝＝＝＝＝ VSCode / IDE 编辑器配置 ＝＝＝＝＝
+.vscode/
+.idea/
+*.swp
+
+# ＝＝＝＝＝ LangChain / LLM 项目特有文件 ＝＝＝＝＝
+data/vector_index/
+*.jsonl
+*.pt
+*.bin
+*.cache/
+hf_cache/
+
+# ＝＝＝＝＝ Docker 相关 ＝＝＝＝＝
+Dockerfile
+.dockerignore
+*.container
+*.tar
+
+# ＝＝＝＝＝ 单元测试缓存 ＝＝＝＝＝
+.coverage
+htmlcov/
+.cache/
+pytest_cache/
+
+# ＝＝＝＝＝ Jupyter / Markdown 笔记（可选） ＝＝＝＝＝
+.ipynb_checkpoints
+*.ipynb
