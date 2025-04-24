@@ -35,16 +35,20 @@ if submitted:
     st.chat_message("user").write(user_prompt)
 
     try:
+        # payload = {
+        #     "goal": goal,
+        #     "preferences": preferences,
+        #     "allergies": allergy_list
+        # }
+
         payload = {
-            "goal": goal,
-            "preferences": preferences,
-            "allergies": allergy_list
+            "query": user_prompt
         }
 
         response = requests.post("http://localhost:8000/recommend", json=payload)
         if response.status_code == 200:
             result = response.json()
-            reply = f"🥗 Here's a suggestion based on your input:\n\n{result.get('message', '')}"
+            reply = f"🥗 Here's a suggestion based on your input:\n\n{result.get('markdown_response', '')}"
         else:
             reply = f"❌ Error from backend: {response.status_code}"
     except Exception as e:

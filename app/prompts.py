@@ -1,14 +1,18 @@
+# app/prompts.py
+
 import json
+from langchain.prompts import PromptTemplate
+
 def query_clean_prompt() -> str:
-    prompt = f"""
+    prompt = """
 # Role:
 You are an intelligent assistant specialized in understanding user queries related to healthy cooking.
 
 # Task:
 Analyze the user's raw query provided below. Your goal is to:
-1.  Identify the primary **intent** of the user from the predefined list.
-2.  Extract relevant **entities** mentioned in the query based on the predefined categories.
-3.  Provide a slightly cleaned version of the original query (e.g., trimming extra whitespace).
+1. Identify the primary **intent** of the user from the predefined list.
+2. Extract relevant **entities** mentioned in the query based on the predefined categories.
+3. Provide a slightly cleaned version of the original query (e.g., trimming extra whitespace).
 
 # Predefined Intents:
 - `find_recipe`: User wants a recipe.
@@ -20,12 +24,12 @@ Analyze the user's raw query provided below. Your goal is to:
 - `unknown`: If the intent is unclear or doesn't fit the above categories.
 
 # Predefined Entity Categories:
-- `ingredients`: Specific food items mentioned (e.g., 鸡胸肉, 鹰嘴豆, 蔬菜, 白糖).
-- `dietary_restrictions_preferences`: Health or diet related constraints or preferences (e.g., 低碳水, 高蛋白, 素食, 无麸质, 低脂, 低糖, 健康).
-- `nutritional_goals`: Specific nutritional targets (e.g., <500 大卡, >20g 蛋白质, 500 大卡以下).
-- `meal_type`: The type of meal (e.g., 早餐, 午餐, 晚餐, 零食).
-- `cooking_methods`: Specific cooking techniques mentioned (e.g., 烤, 蒸, 炒).
-- `exclusions`: Ingredients or characteristics the user wants to avoid (e.g., 不要辣, 不要香菜).
+- `ingredients`: Specific food items mentioned (e.g., chicken breast, chickpeas, vegetables, sugar).
+- `dietary_restrictions_preferences`: Health or diet related constraints or preferences (e.g., low-carb, high-protein, vegetarian, gluten-free, low-fat, low-sugar, healthy).
+- `nutritional_goals`: Specific nutritional targets (e.g., <500 kcal, >20g protein, under 500 kcal).
+- `meal_type`: The type of meal (e.g., breakfast, lunch, dinner, snack).
+- `cooking_methods`: Specific cooking techniques mentioned (e.g., baking, steaming, stir-frying).
+- `exclusions`: Ingredients or characteristics the user wants to avoid (e.g., no spicy, no cilantro).
 
 # Output Format:
 Please return the analysis strictly in JSON format with the following keys:
@@ -36,75 +40,77 @@ Please return the analysis strictly in JSON format with the following keys:
 # Examples:
 
 ## Example 1:
-User Query: "  我想要一份低碳水、高蛋白的晚餐食谱，用鸡胸肉做。  "
+User Query: "I want a low-carb, high-protein dinner recipe using chicken breast."
 Expected Output:
 ```json
-{
-    "cleaned_query": "我想要一份低碳水、高蛋白的晚餐食谱，用鸡胸肉做。",
+{{
+    "cleaned_query": "I want a low-carb, high-protein dinner recipe using chicken breast.",
     "intent": "find_recipe",
-    "entities": {
-        "ingredients": ["鸡胸肉"],
-        "dietary_restrictions_preferences": ["低碳水", "高蛋白"],
-        "meal_type": ["晚餐"]
-    }
-}
+    "entities": {{
+        "ingredients": ["chicken breast"],
+        "dietary_restrictions_preferences": ["low-carb", "high-protein"],
+        "meal_type": ["dinner"]
+    }}
+}}
 ```
 
 ## Example 2:
-
-User Query: "鹰嘴豆泥怎么做才更健康？"
+User Query: "How can I make hummus healthier?"
 Expected Output:
 ```json
-{
-    "cleaned_query": "鹰嘴豆泥怎么做才更健康？",
+{{
+    "cleaned_query": "How can I make hummus healthier?",
     "intent": "ask_cooking_technique",
-    "entities": {
-        "ingredients": ["鹰嘴豆泥"],
-        "dietary_restrictions_preferences": ["健康"]
-    }
-}
+    "entities": {{
+        "ingredients": ["hummus"],
+        "dietary_restrictions_preferences": ["healthy"]
+    }}
+}}
 ```
 
 ## Example 3:
-
-User Query: "可以用什么代替食谱里的白糖？"
+User Query: "What can I use instead of sugar in a recipe?"
 Expected Output:
 ```json
-{
-    "cleaned_query": "可以用什么代替食谱里的白糖？",
+{{
+    "cleaned_query": "What can I use instead of sugar in a recipe?",
     "intent": "find_healthy_substitute",
-    "entities": {
-        "ingredients": ["白糖"]
-    }
-}
+    "entities": {{
+        "ingredients": ["sugar"]
+    }}
+}}
 ```
 
 ## Example 4:
-
-User Query: "给我推荐几个500 大卡以下的午餐吧，不要辣的"
+User Query: "Please suggest some under 500 calorie lunch options. Nothing spicy."
 Expected Output:
 ```json
-{
-    "cleaned_query": "给我推荐几个500 大卡以下的午餐吧，不要辣的",
+{{
+    "cleaned_query": "Please suggest some under 500 calorie lunch options. Nothing spicy.",
     "intent": "request_meal_plan_idea",
-    "entities": {
-        "nutritional_goals": ["500 大卡以下"],
-        "meal_type": ["午餐"],
-        "exclusions": ["不要辣"]
-    }
-}
+    "entities": {{
+        "nutritional_goals": ["under 500 kcal"],
+        "meal_type": ["lunch"],
+        "exclusions": ["no spicy"]
+    }}
+}}
 ```
 
 # User Query to Analyze:
 {query}
 
+# Instructions:
+- Return the output as a raw JSON object only.
+- Do NOT include any explanation, markdown formatting (like ```json), or additional comments.
+- The response must be a valid JSON object starting with `{{` and ending with `}}`.
+
 Analysis Result (JSON):
-    
-    """
+"""
     return prompt
 
 
-def generate_reconstruct_prompt(intent: str, entities: dict) -> str:
+
+def generate_reconstruct_prompt() -> str:
     """
     Generates a prompt for an LLM to rewrite a user query for semantic search.
 
@@ -119,66 +125,58 @@ def generate_reconstruct_prompt(intent: str, entities: dict) -> str:
     Returns:
         A formatted prompt string ready to be sent to an LLM.
     """
-    # 将实体字典转换为字符串，以便清晰地放入 Prompt
-    # 使用 json.dumps 比简单的 str() 更规范，尤其对于嵌套结构
-    entities_str = json.dumps(entities, indent=2) # ensure_ascii=False 保留中文
+    prompt = """
+# Role:
+You are an expert at rewriting user cooking requests into effective natural language search queries optimized for a semantic search database (like a vector database for healthy recipes).
 
-    prompt = f"""
-    # Role:
-    You are an expert at rewriting user cooking requests into effective natural language search queries optimized for a semantic search database (like a vector database for healthy recipes).
+# Task:
+Based on the structured intent and entities extracted from a user's original query (provided below), generate ONE concise and effective search query string. This query should capture the core meaning and constraints, suitable for finding relevant healthy cooking information via semantic similarity.
 
-    # Task:
-    Based on the structured intent and entities extracted from a user's original query (provided below), generate ONE concise and effective search query string. This query should capture the core meaning and constraints, suitable for finding relevant healthy cooking information via semantic similarity.
+# Input Format:
+The intent and entities are provided as follows:
+Intent: {intent}
+Entities:
+{entities}
 
-    # Input Format:
-    The intent and entities are provided as follows:
-    Intent: {intent}
-    Entities:
-    {entities_str}
+# Output Format:
+Return ONLY the generated search query string. Do not include any introductory text, labels, or explanations. Just the query itself.
 
-    # Output Format:
-    Return ONLY the generated search query string. Do not include any introductory text, labels, or explanations. Just the query itself.
+# Example 1:
+Intent: find_recipe
+Entities:
+```json
+{{
+    "ingredients": ["chicken breast"],
+    "dietary_restrictions_preferences": ["low-carb", "high-protein"],
+    "meal_type": ["dinner"]
+}}
+```
+Optimized Search Query:
+healthy low-carb high-protein chicken breast dinner recipe
 
-    # Example 1:
-    Intent: find_recipe
-    Entities:
-    {{
-    "ingredients": ["鸡胸肉"],
-    "dietary_restrictions_preferences": ["低碳水", "高蛋白"],
-    "meal_type": ["晚餐"]
-    }}
-    Optimized Search Query:
-    健康低碳水高蛋白鸡胸肉晚餐食谱
+# Example 2:
+Intent: find_healthy_substitute
+Entities:
+```json
+{{
+    "ingredients": ["sugar"]
+}}
+```
+Optimized Search Query:
+What is a healthy substitute for sugar?
 
-    # Example 2:
-    Intent: find_healthy_substitute
-    Entities:
-    {{
-    "ingredients": ["白糖"]
-    }}
-    Optimized Search Query:
-    白糖的健康替代品是什么
-
-    # Example 3:
-    Intent: ask_cooking_technique
-    Entities:
-    {{
-    "ingredients": ["鹰嘴豆泥"],
-    "dietary_restrictions_preferences": ["健康"]
-    }}
-    Optimized Search Query:
-    如何制作更健康的鹰嘴豆泥
-
-    # Input Data for Generation:
-    Intent: {intent}
-    Entities:
-    {entities_str}
-
-    # Optimized Search Query:
-    """
-    # Note: We escape the curly braces inside the JSON examples using {{ }}
-    # because they are inside an f-string. The final {intent} and {entities_str}
-    # are intentionally left single for replacement.
+# Example 3:
+Intent: ask_cooking_technique
+Entities:
+```json
+{{
+    "ingredients": ["hummus"],
+    "dietary_restrictions_preferences": ["healthy"]
+}}
+```
+Optimized Search Query:
+How to make healthier hummus?
+"""
     return prompt
 
 

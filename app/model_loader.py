@@ -1,4 +1,5 @@
-from app.schemas import ParsedQuery
+# app/model_loader.py
+
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from app.prompts import *
@@ -18,21 +19,19 @@ EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 LLM_MODEL_NAME = "gpt-4o" # Example: Choose your Ollama model
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# --- Global variables to hold initialized resources ---
-embedding = None
-vectorstore = None
-retriever = None
-llm = None
-intent_extraction_chain = None
-rewrite_chain = None
-answer_chain = None 
 
 # --- Initialization Function ---
 def initialize_rag_resources():
     """Loads and initializes all RAG components based on the provided snippet."""
-    global embedding, vectorstore, retriever, llm, intent_extraction_chain, rewrite_chain, answer_chain # Declare modification of globals
 
     logging.info("--- Starting RAG Resource Initialization ---")
+    embedding = None
+    vectorstore = None
+    retriever = None
+    llm = None
+    intent_extraction_chain = None
+    rewrite_chain = None
+    answer_chain = None 
 
     # 1. Initialize LLM (You need to replace this with your actual LLM setup)
     logging.info("Initializing LLM (OpenAI GPT)...")
@@ -42,7 +41,7 @@ def initialize_rag_resources():
             raise ValueError("OPENAI_API_KEY environment variable not set.")
 
         # Select the GPT model, e.g., "gpt-4o", "gpt-3.5-turbo"
-        llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
         logging.info("LLM (OpenAI GPT) initialized.")
     except Exception as e:
         logging.error(f"Error initializing OpenAI LLM: {e}", exc_info=True)
@@ -81,14 +80,17 @@ def initialize_rag_resources():
         # Step 1: Structure Extraction Chain
         intent_prompt = PromptTemplate(input_variables=["query"], template=query_clean_prompt()) # Assuming query_clean_prompt returns the template string
         intent_extraction_chain = LLMChain(llm=llm, prompt=intent_prompt)
+        print(f"intent_extraction_chain: {intent_extraction_chain}")
 
         # Step 2: Query Rewrite Chain
-        rewrite_prompt = PromptTemplate(input_variables=["intent", "entities_str"], template=generate_reconstruct_prompt()) # Assuming generate_reconstruct_prompt returns the template string
+        rewrite_prompt = PromptTemplate(input_variables=["intent", "entities"], template=generate_reconstruct_prompt()) # Assuming generate_reconstruct_prompt returns the template string
         rewrite_chain = LLMChain(llm=llm, prompt=rewrite_prompt)
+        print(f"rewrite_chain: {rewrite_chain}")
 
         # Step 3: Final Answer Generation Chain
         final_prompt = PromptTemplate(input_variables=["question", "context"], template=final_generation_prompt_template())
         answer_chain = LLMChain(llm=llm, prompt=final_prompt)
+        print(f"answer_chain: {answer_chain}")
 
         logging.info("LLM Chains created.")
     except Exception as e:
@@ -96,3 +98,13 @@ def initialize_rag_resources():
         raise
 
     logging.info("--- RAG Resource Initialization Complete ---")
+
+    return {
+        "embedding": embedding,
+        "vectorstore": vectorstore,
+        "retriever": retriever,
+        "llm": llm,
+        "intent_extraction_chain": intent_extraction_chain,
+        "rewrite_chain": rewrite_chain,
+        "answer_chain": answer_chain
+    }

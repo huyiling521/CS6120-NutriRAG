@@ -1,24 +1,27 @@
-from app.schemas import ParsedQuery
+# app/rag_chain.py
+
 from langchain.prompts import PromptTemplate
 from app.prompts import *
 from langchain.docstore.document import Document
 from app.model_loader import *
+from fastapi import Request
 import re
 import json
 import logging
 
 
-def _preprocess_user_query(user_query: str):
-    intent_result = intent_extraction_chain.invoke({"query": user_query})
+def _preprocess_user_query(user_query: str, request: Request):
+    intent_result = request.app.state.rag_resources["intent_extraction_chain"].invoke({"query": user_query})
+    print(f"Intent Result: {intent_result}")
     raw_json_str = intent_result["text"]
+    
     parsed = json.loads(raw_json_str)
 
-    entities_str = json.dumps(parsed["entities"], indent=2)
 
-    optimized_query_result = rewrite_chain.invoke(
+    optimized_query_result = request.app.state.rag_resources["rewrite_chain"].invoke(
         {
             "intent": parsed["intent"],
-            "entities_str": entities_str
+            "entities": parsed["entities"]
         }
     )
     
@@ -27,17 +30,17 @@ def _preprocess_user_query(user_query: str):
     return {
         "cleaned_query": parsed["cleaned_query"],
         "intent": parsed["intent"],
-        "entities_str": entities_str,
+        "entities": parsed["entities"],
         "semantic_query": processed_query
     }
 
 
-def _retrieve_docs(semantic_query: str) -> list[Document]:
+def _retrieve_docs(semantic_query: str, request: Request) -> list[Document]:
     """根据语义查询检索相关文档。"""
     print(f"Retrieving documents for semantic query: {semantic_query}")
     try:
         # Use the retriever created during initialization
-        retrieved_docs = retriever.invoke(semantic_query) # Use invoke() for newer LangChain versions
+        retrieved_docs = request.app.state.rag_resources["retriever"].invoke(semantic_query) # Use invoke() for newer LangChain versions
         print(f"Retrieved {len(retrieved_docs)} documents.")
         return retrieved_docs
     except Exception as e:
@@ -103,7 +106,7 @@ def _query_preprocess(query: str) -> str:
 
 
 
-def full_rag_pipeline(user_query: str) -> str:
+async def full_rag_pipeline(user_query: str, request: Request) -> str:
     """完整的 RAG 流程，接收用户查询并返回 Markdown 格式的推荐。
 
     Args:
@@ -116,7 +119,7 @@ def full_rag_pipeline(user_query: str) -> str:
     logging.info(f"--- Starting Full RAG Pipeline for query: '{user_query}' ---")
 
     # 1. 解析查询
-    preprocess_result = _preprocess_user_query(user_query)
+    preprocess_result = _preprocess_user_query(user_query, request)
     semantic_query = preprocess_result["semantic_query"]
 
     if not semantic_query:
@@ -126,7 +129,7 @@ def full_rag_pipeline(user_query: str) -> str:
     logging.info(f"Semantic Query: {semantic_query}")
     
      # 2. 检索文档
-    retrieved_docs = _retrieve_docs(semantic_query)
+    retrieved_docs = _retrieve_docs(semantic_query, request)
 
     # 3. 处理检索到的文档，生成上下文
     context_string = _process_retrieved_docs(retrieved_docs)
@@ -134,16 +137,8 @@ def full_rag_pipeline(user_query: str) -> str:
     logging.info(f"Context String: {context_string}")
     
     # 3. 构建 Prompt (TODO)
-    if not answer_chain:
-        logging.error("Answer chain is not initialized.")
-        return "抱歉，系统内部错误，无法生成回答。"
-
     try:
-        # 调用 answer_chain，传入 user_query 和 context_string
-        # 这对应了我们之前讨论的 final_generation_prompt_template_str 需要的输入
-        # llm_response = answer_chain.run(question=user_query, context=context_string)
-        # 对于 LangChain > 0.1.0, 推荐使用 invoke:
-        llm_response = answer_chain.invoke({"question": user_query, "context": context_string})
+        llm_response = request.app.state.rag_resources["answer_chain"].invoke({"question": user_query, "context": context_string})
         markdown_answer = llm_response["text"]
 
         logging.info("Successfully generated final answer.")

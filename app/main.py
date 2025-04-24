@@ -20,7 +20,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 async def lifespan(app: FastAPI):
     logging.info("Application startup...")
     try:
-        initialize_rag_resources()
+        rag_resources = initialize_rag_resources()
+        app.state.rag_resources = rag_resources
         logging.info("RAG resources initialized successfully.")
     except Exception as e:
         logging.critical(f"Failed to initialize RAG resources during startup: {e}", exc_info=True)
