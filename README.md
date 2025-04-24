@@ -58,6 +58,7 @@ cd CS6120-NutriRAG
 ### 2. Setup `.env` Files
 
 - `app/.env`:
+
   ```
   OPENAI_API_KEY=YOUR-OPENAI-API-KEY
   IS_CLOUD_ENV=false
@@ -75,10 +76,13 @@ docker compose up --build
 ```
 
 If you already built, then run with:
+
 ```bash
 docker compose up
 ```
+
 Stop with:
+
 ```bash
 docker compose down
 ```
@@ -87,7 +91,6 @@ docker compose down
 - Backend API runs at: http://0.0.0.0:8000
 
 ---
-
 
 ## 📎 Notes
 
@@ -101,7 +104,7 @@ docker compose down
 - Yiling Hu
 - Liu Yang
 - Dongyin Li
-- Junhui Sun
+- Junhui Su
 
 ---
 
