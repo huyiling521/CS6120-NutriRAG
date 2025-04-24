@@ -2,7 +2,7 @@
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from prompts import *
+from app.prompts import *
 from langchain_community.vectorstores import FAISS # Updated import
 from langchain_community.embeddings import HuggingFaceEmbeddings # Updated import
 from langchain.docstore.document import Document
@@ -135,7 +135,7 @@ def initialize_rag_resources():
         print(f"rewrite_chain: {rewrite_chain}")
 
         # Step 3: Final Answer Generation Chain
-        final_prompt = PromptTemplate(input_variables=["question", "context"], template=final_generation_prompt_template())
+        final_prompt = PromptTemplate(input_variables=["question", "context", "formatted_history"], template=final_generation_prompt_template())
         answer_chain = LLMChain(llm=llm, prompt=final_prompt)
         print(f"answer_chain: {answer_chain}")
 

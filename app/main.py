@@ -6,9 +6,9 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from routes import router
+from app.routes import router
 
-from model_loader import initialize_rag_resources
+from app.model_loader import initialize_rag_resources
 
 from dotenv import load_dotenv
 
