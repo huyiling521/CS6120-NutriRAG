@@ -48,8 +48,6 @@ cd CS6120-NutriRAG
 
 ```bash
 pip install -r requirements.txt
-
-pip install gdown
 cd ./CS6120-NutriRAG/data/
 gdown 1_ouVNYI2SPzjhLY4iQ18Gjy-U7XWCpb4
 gdown --folder 1fgvui1M1kAd4YTu6aEoXJ083QfXhchGh
