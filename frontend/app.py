@@ -27,27 +27,28 @@ if prompt := st.chat_input("What would you like to know?"):
         }
 
         # --- Make the API Call ---
-        # Display a thinking indicator
-        with st.chat_message("assistant"):
-            with st.spinner("NutriBot is thinking..."):
-                response = requests.post("http://localhost:8000/recommend", json=payload) # Assuming backend endpoint is /process_query
+        # Display a thinking indicator with placeholder
+        assistant_placeholder = st.chat_message("assistant").empty()
 
+        with assistant_placeholder.container():
+            with st.spinner("NutriBot is thinking..."):
+                response = requests.post("http://localhost:8000/recommend", json=payload)
                 if response.status_code == 200:
                     result = response.json()
                     reply = result.get('markdown_response', 'Sorry, I could not process your request.')
-                elif response.status_code == 422: # Handle validation errors
+                elif response.status_code == 422:
                     reply = f"❌ Input Error: {response.json().get('detail', 'Invalid input')}"
                 else:
                     reply = f"❌ Error from backend: {response.status_code} - {response.text}"
+
+        # Save & render assistant reply
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        assistant_placeholder.markdown(reply)
 
     except requests.exceptions.RequestException as e:
         reply = f"⚠️ Could not connect to the NutriBot backend: {e}. Please ensure it's running."
     except Exception as e:
         reply = f"⚠️ An unexpected error occurred: {e}"
-
-    # Save and display assistant message
-    st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.chat_message("assistant").write(reply)
 
 
 # Footer
