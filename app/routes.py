@@ -1,7 +1,7 @@
 # app/routes.py
 from fastapi import APIRouter, Request, HTTPException
-from app.schemas import QueryRequest  # Import the request model
-from app.rag_chain import full_rag_pipeline # Import the main RAG pipeline function
+from schemas import QueryRequest  # Import the request model
+from rag_chain import full_rag_pipeline # Import the main RAG pipeline function
 import logging # Import logging
 
 router = APIRouter()

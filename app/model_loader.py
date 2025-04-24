@@ -2,7 +2,7 @@
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from app.prompts import *
+from prompts import *
 from langchain_community.vectorstores import FAISS # Updated import
 from langchain_community.embeddings import HuggingFaceEmbeddings # Updated import
 from langchain.docstore.document import Document

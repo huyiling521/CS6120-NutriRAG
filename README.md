@@ -1,103 +1,107 @@
-# 🥦 NutriRAG: A RAG-Powered Nutrition Assistant
+# 🥦 NutriRAG: A RAG-powered Nutrition Assistant
 
-**NutriRAG** is a Retrieval-Augmented Generation (RAG) system designed to help users get personalized meal plans, recipe suggestions, and nutritional guidance powered by a large language model (LLM). Users can ask for protein-rich meals, healthy substitutes, or low-calorie recipes, and the system retrieves real-world recipe data and generates markdown-based meal plans.
+NutriRAG is a Retrieval-Augmented Generation (RAG) application built for CS6120, providing nutrition and recipe recommendations through an interactive chatbot. It uses FastAPI for the backend, Streamlit for the frontend, and FAISS for semantic search over curated recipe data.
 
 ---
 
-## 🗂️ Project Structure
+## 🚀 Features
 
-```plaintext
+- **Conversational Assistant** with memory and history
+- **FAISS-based Retrieval** over indexed recipe data
+- **LangChain Pipelines** with prompt chaining (intent → rewrite → answer)
+- **Google Cloud Compatible** deployment with Cloud Run and GCS
+- **Docker & Docker Compose** setup for local and cloud environments
+
+---
+
+## 📂 Project Structure
+
+```
 CS6120-NutriRAG/
-├── app/
-│   ├── main.py                # FastAPI entry point
-│   ├── model_loader.py        # RAG component loader (LLM, retriever, chains)
-│   ├── prompts.py             # Prompt templates for each stage of the pipeline
-│   ├── rag_chain.py           # Core RAG pipeline implementation
-│   ├── routes.py              # FastAPI route definitions
-│   ├── schemas.py             # Pydantic schemas for request/response models
+├── app/                         # FastAPI backend
+│   ├── main.py                  # Entry point for backend
+│   ├── routes.py                # API route definitions
+│   ├── model_loader.py          # LLM & retriever loading logic
+│   ├── rag_chain.py             # RAG logic: preprocess → retrieve → generate
+│   ├── prompts.py               # Prompt templates for LLM chains
+│   ├── schemas.py               # Pydantic models for request/response
+│   ├── requirements.txt         # Backend dependencies
+│   └── Dockerfile               # Backend Docker image
 │
-├── data/
-│   ├── longchain_convert.py   # Helper script to build FAISS index from metadata
-│   └── index/
-│       ├── combined_metadata.json      # Source metadata for vector index
-│       └── langchain_faiss/
-│           ├── index.faiss            # FAISS vector store
-│           └── index.pkl              # Index mapping metadata
+├── frontend/                    # Streamlit UI frontend
+│   ├── app.py                   # Streamlit UI entry point
+│   ├── requirements.txt         # Frontend dependencies
+│   └── Dockerfile               # Frontend Docker image
 │
-├── frontend/
-│   ├── app.py                # Streamlit frontend for chat-based interface
-│   └── .env                  # Frontend config (e.g., BACKEND_URL)
+├── data/index/langchain_faiss/ # FAISS index + metadata (not uploaded to GitHub)
+│   ├── index.faiss
+│   └── index.pkl
 │
-├── requirements.txt          # Python dependencies
-├── README.md                 # Project description and setup guide
-└── .env                      # Backend config (e.g., OPENAI_API_KEY)
+├── docker-compose.yml          # Compose both frontend & backend
+├── README.md
 ```
 
 ---
 
-## ⚙️ Quick Start Guide
+## 🧪 Local Development
 
-### 1. Clone the Repository
+### 1. Install Docker Desktop and Clone Project
 
 ```bash
-git clone https://github.com/your-org/CS6120-NutriRAG.git
+git clone https://github.com/huyiling521/CS6120-NutriRAG.git
+or
+git clone git@github.com:huyiling521/CS6120-NutriRAG.git
+
 cd CS6120-NutriRAG
 ```
 
-### 2. Install Dependencies and download data files
+### 2. Setup `.env` Files
+
+- `app/.env`:
+  ```
+  OPENAI_API_KEY=YOUR-OPENAI-API-KEY
+  IS_CLOUD_ENV=false
+  ```
+
+- `frontend/.env`:
+  ```
+  POST_BASE_URL=http://app:8000
+  ```
+
+### 3. Build & Run Locally
 
 ```bash
-pip install -r requirements.txt
-cd data
-gdown 1_ouVNYI2SPzjhLY4iQ18Gjy-U7XWCpb4
-gdown --folder 1fgvui1M1kAd4YTu6aEoXJ083QfXhchGh
+docker-compose up --build
 ```
 
-### 3. Configure Environment Variables
-
-Create a `.env` file under both `/app/` and `/frontend/`.
-
-**`app/.env`**
-
-```env
-OPENAI_API_KEY=your-openai-api-key
-ORIGINS=http://localhost:8501
-```
-
-**`frontend/.env`**
-
-```env
-BACKEND_URL=http://localhost:8000
-```
+- Frontend runs at: http://0.0.0.0:8501
+- Backend API runs at: http://0.0.0.0:8000
 
 ---
 
-### 4. Launch the Backend (FastAPI)
 
-```bash
-uvicorn app.main:app --reload --port 8000
-```
+## 📎 Notes
 
----
-
-### 5. Launch the Frontend (Streamlit)
-
-```bash
-streamlit run frontend/app.py
-```
+- If FAISS files are missing locally, backend will auto-download from Drive or GCS
+- `docker-compose` sets up network linking so `http://app:8000` works in frontend
 
 ---
 
-## 💡 Features
+## 👥 Team
 
-- Intent & Entity Extraction with LLM
-- Query Rewriting for Semantic Search
-- FAISS-based Vector Retrieval
-- Context-Aware Answer Generation
-- Streamlit Chat Interface
+- Yiling Hu
+- Liu Yang
+- Dongyin Li
+- Junhui Sun
 
 ---
 
-## 📦 Docker Support
+## 🧠 Powered By
 
-Coming soon: `Dockerfile` for full containerized deployment.
+- LangChain
+- OpenAI
+- HuggingFace Embeddings
+- FAISS
+- Streamlit
+- FastAPI
+- Google Cloud Run
