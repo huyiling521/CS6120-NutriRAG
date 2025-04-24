@@ -1,9 +1,10 @@
 # app/rag_chain.py
 
+from app.schemas import Message
 from langchain.prompts import PromptTemplate
-from prompts import *
+from app.prompts import *
 from langchain.docstore.document import Document
-from model_loader import *
+from app.model_loader import *
 from fastapi import Request
 import re
 import json
@@ -129,7 +130,7 @@ def _query_preprocess(query: str) -> str:
 
 
 
-async def full_rag_pipeline(user_query: str, request: Request) -> dict:
+async def full_rag_pipeline(user_query: str, history: list[Message],request: Request) -> dict:
     """Executes the full RAG pipeline: preprocess, retrieve, generate.
 
     Args:
@@ -160,10 +161,18 @@ async def full_rag_pipeline(user_query: str, request: Request) -> dict:
 
     # 4. Generate Final Answer using LLM with Context
     logging.info(f"Generating final answer using context (length: {len(context_string)} chars)")
+
+    formatted_history = ""
+    if history:
+        for turn in history[-4:]:  
+            role = turn.role
+            content = turn.content
+            formatted_history += f"{role.capitalize()}: {content}\n"
+
     try:
         # Use the final answering chain
         final_chain = request.app.state.rag_resources["answer_chain"]
-        llm_response = final_chain.invoke({"question": user_query, "context": context_string})
+        llm_response = final_chain.invoke({"question": user_query, "context": context_string, "formatted_history": formatted_history})
         markdown_answer = llm_response["text"]
 
         logging.info("Successfully generated final answer.")

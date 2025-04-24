@@ -71,7 +71,16 @@ cd CS6120-NutriRAG
 ### 3. Build & Run Locally
 
 ```bash
-docker-compose up --build
+docker compose up --build
+```
+
+If you already built, then run with:
+```bash
+docker compose up
+```
+Stop with:
+```bash
+docker compose down
 ```
 
 - Frontend runs at: http://0.0.0.0:8501

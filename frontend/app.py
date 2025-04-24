@@ -3,6 +3,7 @@ import requests
 import os
 
 POST_URL = 'http://app:8000/'
+# POST_URL = 'http://localhost:8000/'
 
 st.set_page_config(page_title="NutriBot 🍽️", page_icon="🥦")
 st.title("🥦 NutriBot: Your Nutrition Assistant")
@@ -26,7 +27,8 @@ if prompt := st.chat_input("What would you like to know?"):
     # Send user prompt to backend
     try:
         payload = {
-            "query": prompt  # Use the user's full input as the query
+            "query": prompt,
+            "history": st.session_state.messages
         }
 
         # --- Make the API Call ---
