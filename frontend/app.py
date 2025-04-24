@@ -1,5 +1,8 @@
 import streamlit as st
 import requests
+import os
+
+POST_URL = 'http://app:8000/'
 
 st.set_page_config(page_title="NutriBot 🍽️", page_icon="🥦")
 st.title("🥦 NutriBot: Your Nutrition Assistant")
@@ -32,7 +35,7 @@ if prompt := st.chat_input("What would you like to know?"):
 
         with assistant_placeholder.container():
             with st.spinner("NutriBot is thinking..."):
-                response = requests.post("http://localhost:8000/recommend", json=payload)
+                response = requests.post(f"{POST_URL}/recommend", json=payload)
                 if response.status_code == 200:
                     result = response.json()
                     reply = result.get('markdown_response', 'Sorry, I could not process your request.')

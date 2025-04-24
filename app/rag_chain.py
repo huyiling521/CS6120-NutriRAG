@@ -1,9 +1,9 @@
 # app/rag_chain.py
 
 from langchain.prompts import PromptTemplate
-from app.prompts import *
+from prompts import *
 from langchain.docstore.document import Document
-from app.model_loader import *
+from model_loader import *
 from fastapi import Request
 import re
 import json
