@@ -44,10 +44,15 @@ git clone https://github.com/your-org/CS6120-NutriRAG.git
 cd CS6120-NutriRAG
 ```
 
-### 2. Install Dependencies
+### 2. Install Dependencies and download data files
 
 ```bash
 pip install -r requirements.txt
+
+pip install gdown
+cd ./CS6120-NutriRAG/data/
+gdown 1_ouVNYI2SPzjhLY4iQ18Gjy-U7XWCpb4
+gdown --folder 1fgvui1M1kAd4YTu6aEoXJ083QfXhchGh
 ```
 
 ### 3. Configure Environment Variables
