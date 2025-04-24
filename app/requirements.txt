@@ -1,18 +1,13 @@
-# Core backend
 fastapi
 uvicorn[standard]
 python-dotenv
-
-# LangChain & FAISS
 langchain
 langchain-community
 langchain-openai
 openai
 faiss-cpu
 tiktoken
-
-# Storage & Utilities
 gcsfs
-gdown # For downloading files from Google Drive
-
-# Logging
+gdown
+torch
+sentence-transformers
