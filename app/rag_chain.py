@@ -10,25 +10,39 @@ import json
 import logging
 
 
-def _preprocess_user_query(user_query: str, request: Request):
+def _preprocess_user_query(user_query: str, request: Request) -> dict:
+    """Preprocesses the user query using intent extraction and rewriting chains."""
+    # Extract intent and entities
     intent_result = request.app.state.rag_resources["intent_extraction_chain"].invoke({"query": user_query})
-    
+
     raw_json_str = intent_result["text"]
-    logging.info(f"Raw JSON String: {raw_json_str}")
-    
-    parsed = json.loads(raw_json_str)
+    logging.info(f"Raw JSON String from intent extraction: {raw_json_str}")
 
+    try:
+        parsed = json.loads(raw_json_str)
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse JSON from intent extraction: {e}")
+        # Handle error: maybe return a default structure or raise an exception
+        # For now, let's return a structure indicating failure
+        return {
+            "cleaned_query": user_query, # Or None
+            "intent": "unknown",
+            "entities": {},
+            "semantic_query": user_query # Fallback to original query
+        }
 
+    # Rewrite the query based on intent and entities for semantic search
     optimized_query_result = request.app.state.rag_resources["rewrite_chain"].invoke(
         {
             "intent": parsed["intent"],
             "entities": parsed["entities"]
         }
     )
-    
+
     optimized_query = optimized_query_result["text"]
+    # Clean up the rewritten query (remove fluff, normalize whitespace)
     processed_query = _query_preprocess(optimized_query)
-    logging.info(f"Processed Query: {processed_query}")
+    logging.info(f"Processed Semantic Query: {processed_query}")
     return {
         "cleaned_query": parsed["cleaned_query"],
         "intent": parsed["intent"],
@@ -38,116 +52,125 @@ def _preprocess_user_query(user_query: str, request: Request):
 
 
 def _retrieve_docs(semantic_query: str, request: Request) -> list[Document]:
-    """根据语义查询检索相关文档。"""
-    print(f"Retrieving documents for semantic query: {semantic_query}")
+    """Retrieves relevant documents based on the semantic query."""
+    logging.info(f"Retrieving documents for semantic query: {semantic_query}")
     try:
-        # Use the retriever created during initialization
+        # Use the retriever loaded during application startup
         retrieved_docs = request.app.state.rag_resources["retriever"].invoke(semantic_query) # Use invoke() for newer LangChain versions
-        print(f"Retrieved {len(retrieved_docs)} documents.")
+        logging.info(f"Retrieved {len(retrieved_docs)} documents.")
         return retrieved_docs
     except Exception as e:
-        print(f"Error during retrieval: {e}")
+        logging.error(f"Error during document retrieval: {e}", exc_info=True)
         return [] # Return empty list on error
 
 
 def _process_retrieved_docs(retrieved_docs: list[Document]) -> str:
+    """Formats the retrieved documents into a single string context for the LLM."""
     context_parts = []
-    logging.debug("--- Retrieved Documents ---")
+    logging.debug("--- Processing Retrieved Documents ---")
     if not retrieved_docs:
         logging.warning("No relevant documents found by retriever.")
-        context_string = "No relevant recipe information found." # 或者空字符串 ""
+        # Provide a neutral context if no documents are found
+        context_string = "No specific recipe information found based on the query."
     else:
         for i, doc in enumerate(retrieved_docs):
-            # --- 从 doc 中提取你需要的信息 ---
-            recipe_name = doc.metadata.get("recipe_name", "Unknown recipe")
-            # 优先用 preview，如果没有则用 page_content (假设 page_content 是 preview 的内容)
+            # Extract relevant information from the document metadata and content
+            recipe_name = doc.metadata.get("recipe_name", "Unknown Recipe")
+            # Prioritize using a 'preview' field if available, otherwise use page_content
             content_snippet = doc.metadata.get("preview", doc.page_content)
-            # 可以再加一些其他 metadata 信息，比如 ingredients
             ingredients_snippet = doc.metadata.get("ingredients", "")
-            ingredients_str = f"\nmain ingredients: {ingredients_snippet[:100]}..." if ingredients_snippet else ""
 
-            content_snippet = (content_snippet[:200] + '...') if len(content_snippet) > 200 else content_snippet # 限制长度
+            # Limit snippet length for conciseness
+            content_snippet = (content_snippet[:250] + '...') if len(content_snippet) > 250 else content_snippet
+            ingredients_str = f"\nMain ingredients: {ingredients_snippet[:100]}..." if ingredients_snippet else ""
 
-            logging.debug(f"Doc {i+1}: {recipe_name}")
+            logging.debug(f"Doc {i+1}: Name='{recipe_name}', Snippet Length={len(content_snippet)}")
 
-            # --- 格式化每个文档的信息 ---
-            context_parts.append(f"Related recipe {i+1}: {recipe_name}\nContent: {content_snippet}\n---") # ingredients_str)
-            # ---------------------------
+            # Format information for each document
+            context_parts.append(f"Relevant Document {i+1}:\nRecipe Name: {recipe_name}\nContent Snippet: {content_snippet}{ingredients_str}\n---")
 
-        # --- 将所有片段合并成一个字符串 ---
+        # Combine all parts into a single context string
         context_string = "\n\n".join(context_parts)
-        # ---------------------------------
 
-    logging.debug(f"Context for LLM:\n{context_string[:500]}...")
+    logging.debug(f"Generated Context String (first 500 chars):\n{context_string[:500]}...")
 
     return context_string
 
 
 def _query_preprocess(query: str) -> str:
-    """Applies common cleaning steps to an LLM-generated rewritten query."""
+    """Applies common cleaning steps to a query, often after LLM rewriting."""
 
     processed_query = query.strip()
-    processed_query = processed_query.lower()
 
-    # Remove common LLM fluff
-    common_fluff = ["Optimized Search Query:", "Search Query:", "Here is the query:"]
+    # Remove common LLM introductory phrases
+    common_fluff = [
+        "Optimized Search Query:",
+        "Search Query:",
+        "Here is the query:",
+        "Rewritten query:",
+        "healthy"
+        ] # Added "healthy" as it often gets prepended unnecessarily
+    processed_query_lower = processed_query.lower()
     for fluff in common_fluff:
-        if processed_query.lower().startswith(fluff.lower()):
+        fluff_lower = fluff.lower()
+        if processed_query_lower.startswith(fluff_lower):
             processed_query = processed_query[len(fluff):].strip()
+            processed_query_lower = processed_query.lower() # Update lower version after stripping
 
-    # Remove quotes
-    if processed_query.startswith('"') and processed_query.endswith('"'):
-        processed_query = processed_query[1:-1].strip()
-    elif processed_query.startswith("'") and processed_query.endswith("'"):
+    # Remove surrounding quotes
+    if (processed_query.startswith('"') and processed_query.endswith('"')) or \
+       (processed_query.startswith("'") and processed_query.endswith("'")):
         processed_query = processed_query[1:-1].strip()
 
-    # clean whitespace
+    # Normalize whitespace
     processed_query = re.sub(r'\s+', ' ', processed_query).strip()
-    
+
     return processed_query
 
 
 
-async def full_rag_pipeline(user_query: str, request: Request) -> str:
-    """完整的 RAG 流程，接收用户查询并返回 Markdown 格式的推荐。
+async def full_rag_pipeline(user_query: str, request: Request) -> dict:
+    """Executes the full RAG pipeline: preprocess, retrieve, generate.
 
     Args:
-        user_query: 用户的自然语言查询。
+        user_query: The user's natural language query.
+        request: The FastAPI request object, used to access shared resources.
 
     Returns:
-        Markdown 格式的推荐结果。
+        A dictionary containing the final answer and potentially intermediate results.
     """
 
     logging.info(f"--- Starting Full RAG Pipeline for query: '{user_query}' ---")
 
-    # 1. 解析查询
+    # 1. Preprocess Query (Intent Extraction, Rewriting, Cleaning)
     preprocess_result = _preprocess_user_query(user_query, request)
     semantic_query = preprocess_result["semantic_query"]
 
     if not semantic_query:
         logging.warning("Preprocessing resulted in an empty semantic query. Aborting.")
-        return "抱歉，无法处理您的查询。"
-    
-    logging.info(f"Semantic Query: {semantic_query}")
-    
-     # 2. 检索文档
+        return {"error": "Sorry, I could not process your query after preprocessing.", "final_answer": "Sorry, I could not process your query."} # Return error structure
+
+    logging.info(f"Using Semantic Query for Retrieval: {semantic_query}")
+
+    # 2. Retrieve Documents
     retrieved_docs = _retrieve_docs(semantic_query, request)
 
-    # 3. 处理检索到的文档，生成上下文
+    # 3. Process Retrieved Documents into Context
     context_string = _process_retrieved_docs(retrieved_docs)
 
-    logging.info(f"Context String: {context_string}")
-    
-    # 3. 构建 Prompt (TODO)
+    # 4. Generate Final Answer using LLM with Context
+    logging.info(f"Generating final answer using context (length: {len(context_string)} chars)")
     try:
-        llm_response = request.app.state.rag_resources["answer_chain"].invoke({"question": user_query, "context": context_string})
+        # Use the final answering chain
+        final_chain = request.app.state.rag_resources["answer_chain"]
+        llm_response = final_chain.invoke({"question": user_query, "context": context_string})
         markdown_answer = llm_response["text"]
 
         logging.info("Successfully generated final answer.")
 
     except Exception as e:
         logging.error(f"Error during final answer generation: {e}", exc_info=True)
-        markdown_answer = "抱歉，在生成最终答案时遇到错误。"
+        markdown_answer = "Sorry, an error occurred while generating the final response."
 
     logging.info(f"--- Finished Full RAG Pipeline ---")
     return markdown_answer

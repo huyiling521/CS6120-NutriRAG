@@ -4,6 +4,7 @@ import json
 from langchain.prompts import PromptTemplate
 
 def query_clean_prompt() -> str:
+    """Generates the prompt for the query cleaning and intent/entity extraction LLM chain."""
     prompt = """
 # Role:
 You are an intelligent assistant specialized in understanding user queries related to healthy cooking.
@@ -118,9 +119,7 @@ def generate_reconstruct_prompt() -> str:
     natural language query optimized for finding relevant healthy cooking info
     in a vector database.
 
-    Args:
-        intent: The intent identified from the user query (e.g., 'find_recipe').
-        entities: A dictionary of entities extracted (e.g., {'ingredients': ['...']}).
+    The input variables expected by the prompt template are 'intent' and 'entities'.
 
     Returns:
         A formatted prompt string ready to be sent to an LLM.

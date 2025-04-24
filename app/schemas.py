@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Optional
 
 class QueryRequest(BaseModel):
+    """Request model for receiving user queries."""
     query: str
 
