@@ -24,4 +24,5 @@ hf_cache/
 *.ipynb
 .ipynb_checkpoints
 
-data/index/
+*.faiss
+*.pkl
