@@ -1,0 +1,27 @@
+# 不上传 .env 和虚拟环境
+.env
+.venv/
+__pycache__/
+
+# 不上传 VSCode 和 IDE 设置
+.vscode/
+.idea/
+
+# 不上传缓存
+*.log
+*.sqlite3
+*.db
+*.egg-info/
+*.pt
+*.bin
+.cache/
+hf_cache/
+
+# ✅ 不忽略 Dockerfile！也保留 FAISS 目录
+# ❌ 不要忽略 Dockerfile 或 data/index/！
+
+# 可选：忽略 Jupyter 文件
+*.ipynb
+.ipynb_checkpoints
+
+data/index/

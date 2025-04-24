@@ -9,6 +9,9 @@ from langchain.docstore.document import Document
 from langchain_openai import ChatOpenAI
 import logging
 import os
+import gcsfs
+import tempfile
+import gdown
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,13 +19,56 @@ load_dotenv()
 # --- Configuration ---
 LANGCHAIN_FAISS_PATH = "data/index/langchain_faiss"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-LLM_MODEL_NAME = "gpt-4o" # Example: Choose your Ollama model
+LLM_MODEL_NAME = "gpt-3.5-turbo" 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+def _download_faiss_index_from_gcs() -> str:
+    fs = gcsfs.GCSFileSystem()
+    bucket_path = "nutrirag-index/langchain_faiss"
+    tmpdir = tempfile.mkdtemp()
+    fs.get(f"{bucket_path}/index.faiss", f"{tmpdir}/index.faiss")
+    fs.get(f"{bucket_path}/index.pkl", f"{tmpdir}/index.pkl")
+    return tmpdir  # local path to FAISS index files
+
+def _ensure_faiss_index_exists(local_dir=LANGCHAIN_FAISS_PATH):
+    index_files = ["index.faiss", "index.pkl"]
+    drive_base_url = "https://drive.google.com/uc?id="
+
+    drive_file_ids = {
+        "index.faiss": "1eP4fjTfrqoYSh8SFdD0V2ZRfscNjyn1R",
+        "index.pkl": "1rMq_T1jsGCnmsgI7ppo_Q1thgCJC7HG_"
+    }
+
+    os.makedirs(local_dir, exist_ok=True)
+
+    for fname in index_files:
+        local_path = os.path.join(local_dir, fname)
+        if not os.path.exists(local_path):
+            print(f"📥 Downloading {fname} from Google Drive using gdown...")
+            file_id = drive_file_ids[fname]
+            # Construct the standard Drive file URL for gdown
+            drive_url = f'https://drive.google.com/uc?id={file_id}'
+            try:
+                gdown.download(drive_url, local_path, quiet=False)
+                print(f"✅ Successfully downloaded {fname}")
+            except Exception as e:
+                print(f"❌ Error downloading {fname}: {e}")
+                # Consider removing the potentially incomplete file
+                if os.path.exists(local_path):
+                    os.remove(local_path)
 
 
 # --- Initialization Function ---
 def initialize_rag_resources():
     """Loads and initializes all RAG components based on the provided snippet."""
+
+    is_cloud_env = os.getenv("IS_CLOUD_ENV", "false").lower() == "true"
+    if is_cloud_env:
+        index_path = _download_faiss_index_from_gcs()
+    else:
+        _ensure_faiss_index_exists()
+        index_path = LANGCHAIN_FAISS_PATH 
 
     logging.info("--- Starting RAG Resource Initialization ---")
     embedding = None
@@ -33,6 +79,7 @@ def initialize_rag_resources():
     rewrite_chain = None
     answer_chain = None 
 
+
     # 1. Initialize LLM (You need to replace this with your actual LLM setup)
     logging.info("Initializing LLM (OpenAI GPT)...")
     try:
@@ -41,7 +88,7 @@ def initialize_rag_resources():
             raise ValueError("OPENAI_API_KEY environment variable not set.")
 
         # Select the GPT model, e.g., "gpt-4o", "gpt-3.5-turbo"
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
+        llm = ChatOpenAI(model=LLM_MODEL_NAME, temperature=0.7)
         logging.info("LLM (OpenAI GPT) initialized.")
     except Exception as e:
         logging.error(f"Error initializing OpenAI LLM: {e}", exc_info=True)
@@ -57,9 +104,9 @@ def initialize_rag_resources():
         raise
 
     # 3. Load FAISS Index
-    logging.info(f"Loading LangChain FAISS index from {LANGCHAIN_FAISS_PATH}...")
+    logging.info(f"Loading LangChain FAISS index from {index_path}...")
     try:
-        vectorstore = FAISS.load_local(LANGCHAIN_FAISS_PATH, embedding, allow_dangerous_deserialization=True)
+        vectorstore = FAISS.load_local(index_path, embedding, allow_dangerous_deserialization=True)
         logging.info("FAISS index loaded successfully.")
     except Exception as e:
         logging.error(f"Error loading FAISS index: {e}", exc_info=True)

@@ -35,8 +35,6 @@ data/vector_index/
 hf_cache/
 
 # ＝＝＝＝＝ Docker 相关 ＝＝＝＝＝
-Dockerfile
-.dockerignore
 *.container
 *.tar
 
@@ -49,3 +47,6 @@ pytest_cache/
 # ＝＝＝＝＝ Jupyter / Markdown 笔记（可选） ＝＝＝＝＝
 .ipynb_checkpoints
 *.ipynb
+
+*.faiss
+*.pkl
