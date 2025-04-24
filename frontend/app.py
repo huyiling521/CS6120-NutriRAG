@@ -1,56 +1,55 @@
-import requests
 import streamlit as st
+import requests
 
-# Sidebar: name input
-with st.sidebar:
-    your_name = st.text_input("What's your name?")
-    st.markdown("[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)")
-    st.markdown("[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/streamlit/llm-examples?quickstart=1)")
+st.set_page_config(page_title="NutriBot 🍽️", page_icon="🥦")
+st.title("🥦 NutriBot: Your Nutrition Assistant")
 
-# Title with optional name and credit
-if your_name:
-    st.title(f"💬 Hi there, {your_name}!")
-else:
-    st.title("💬 My Very Own Chatbot")
+st.caption("Ask me anything about healthy cooking, recipes, or nutritional info!")
 
-st.subheader("🤖 Created by Yiling")
-
-# Description
-st.caption("🚀 A Streamlit chatbot powered by a local GPU-based LLaMA model via Ollama")
-
-# Initialize chat session
+# Initialize message history
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+    st.session_state.messages = [{"role": "assistant", "content": "Hi! How can I help you with your healthy eating today?"}]
 
-# Display message history
+# Display past messages
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# Chat input & response
-if prompt := st.chat_input("Say something..."):
+# Chat input
+if prompt := st.chat_input("What would you like to know?"):
+    # Save and display user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
+    # Send user prompt to backend
     try:
-        # 向 FastAPI 后端发送 POST 请求
         payload = {
-            "goal": prompt,  # 简化处理：用用户输入作为 "goal"
-            "preferences": [],
-            "allergies": []
+            "query": prompt  # Use the user's full input as the query
         }
 
-        response = requests.post("http://localhost:8000/recommend", json=payload)
+        # --- Make the API Call ---
+        # Display a thinking indicator
+        with st.chat_message("assistant"):
+            with st.spinner("NutriBot is thinking..."):
+                response = requests.post("http://localhost:8000/recommend", json=payload) # Assuming backend endpoint is /process_query
 
-        if response.status_code == 200:
-            result = response.json()
-            reply = f"✅ 推荐成功：{result}"
-        else:
-            reply = f"❌ 后端返回错误 {response.status_code}"
+                if response.status_code == 200:
+                    result = response.json()
+                    reply = result.get('markdown_response', 'Sorry, I could not process your request.')
+                elif response.status_code == 422: # Handle validation errors
+                    reply = f"❌ Input Error: {response.json().get('detail', 'Invalid input')}"
+                else:
+                    reply = f"❌ Error from backend: {response.status_code} - {response.text}"
+
+    except requests.exceptions.RequestException as e:
+        reply = f"⚠️ Could not connect to the NutriBot backend: {e}. Please ensure it's running."
     except Exception as e:
-        reply = f"⚠️ 请求失败：{e}"
+        reply = f"⚠️ An unexpected error occurred: {e}"
 
+    # Save and display assistant message
     st.session_state.messages.append({"role": "assistant", "content": reply})
     st.chat_message("assistant").write(reply)
 
-# Footer note
-st.markdown("<br><hr style='margin-top:30px;'><p style='font-size:0.8em; color:gray;'>🔧 This chatbot is running on a locally served model via Ollama in Docker.</p>", unsafe_allow_html=True)
+
+# Footer
+st.markdown("---")
+st.markdown("💡 Powered by RAG and LLM magic for nutrition guidance.")

@@ -12,8 +12,9 @@ import logging
 
 def _preprocess_user_query(user_query: str, request: Request):
     intent_result = request.app.state.rag_resources["intent_extraction_chain"].invoke({"query": user_query})
-    print(f"Intent Result: {intent_result}")
+    
     raw_json_str = intent_result["text"]
+    logging.info(f"Raw JSON String: {raw_json_str}")
     
     parsed = json.loads(raw_json_str)
 
@@ -27,6 +28,7 @@ def _preprocess_user_query(user_query: str, request: Request):
     
     optimized_query = optimized_query_result["text"]
     processed_query = _query_preprocess(optimized_query)
+    logging.info(f"Processed Query: {processed_query}")
     return {
         "cleaned_query": parsed["cleaned_query"],
         "intent": parsed["intent"],
@@ -53,23 +55,23 @@ def _process_retrieved_docs(retrieved_docs: list[Document]) -> str:
     logging.debug("--- Retrieved Documents ---")
     if not retrieved_docs:
         logging.warning("No relevant documents found by retriever.")
-        context_string = "未找到相关菜谱信息。" # 或者空字符串 ""
+        context_string = "No relevant recipe information found." # 或者空字符串 ""
     else:
         for i, doc in enumerate(retrieved_docs):
             # --- 从 doc 中提取你需要的信息 ---
-            recipe_name = doc.metadata.get("recipe_name", "未知菜谱")
+            recipe_name = doc.metadata.get("recipe_name", "Unknown recipe")
             # 优先用 preview，如果没有则用 page_content (假设 page_content 是 preview 的内容)
             content_snippet = doc.metadata.get("preview", doc.page_content)
             # 可以再加一些其他 metadata 信息，比如 ingredients
-            # ingredients_snippet = doc.metadata.get("ingredients", "")
-            # ingredients_str = f"\n主要食材: {ingredients_snippet[:100]}..." if ingredients_snippet else ""
+            ingredients_snippet = doc.metadata.get("ingredients", "")
+            ingredients_str = f"\nmain ingredients: {ingredients_snippet[:100]}..." if ingredients_snippet else ""
 
             content_snippet = (content_snippet[:200] + '...') if len(content_snippet) > 200 else content_snippet # 限制长度
 
             logging.debug(f"Doc {i+1}: {recipe_name}")
 
             # --- 格式化每个文档的信息 ---
-            context_parts.append(f"相关菜谱 {i+1}: {recipe_name}\n内容: {content_snippet}\n---") # ingredients_str)
+            context_parts.append(f"Related recipe {i+1}: {recipe_name}\nContent: {content_snippet}\n---") # ingredients_str)
             # ---------------------------
 
         # --- 将所有片段合并成一个字符串 ---

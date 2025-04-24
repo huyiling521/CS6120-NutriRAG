@@ -155,17 +155,6 @@ Optimized Search Query:
 healthy low-carb high-protein chicken breast dinner recipe
 
 # Example 2:
-Intent: find_healthy_substitute
-Entities:
-```json
-{{
-    "ingredients": ["sugar"]
-}}
-```
-Optimized Search Query:
-What is a healthy substitute for sugar?
-
-# Example 3:
 Intent: ask_cooking_technique
 Entities:
 ```json
